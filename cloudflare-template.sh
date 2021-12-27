@@ -5,13 +5,14 @@ auth_email=""                                      # The email used to login 'ht
 auth_method="token"                                # Set to "global" for Global API Key or "token" for Scoped API Token 
 auth_key=""                                        # Your API Token or Global API Key
 zone_identifier=""                                 # Can be found in the "Overview" tab of your domain
-record_name=""                                     # Which record you want to be synced
+record_name=$1                                     # Which record you want to be synced - command line argument "sub.root-aname.com"
 ttl="3600"                                         # Set the DNS TTL (seconds)
 proxy=false                                        # Set the proxy to true or false
 slacksitename=""                                   # Title of site "Example Site"
 slackchannel=""                                    # Slack Channel #example
 slackuri=""                                        # URI for Slack WebHook "https://hooks.slack.com/services/xxxxx"
-
+discorduname=""                                    # Discord webhook username
+discorduri=""                                      # URI for Discord WebHook "https://discordapp.com/api/webhooks/xxxxxxx"
 
 
 ###########################################
@@ -81,6 +82,7 @@ update=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$zone_iden
 case "$update" in
 *"\"success\":false"*)
   logger -s "DDNS Updater: $ip $record_name DDNS failed for $record_identifier ($ip). DUMPING RESULTS:\n$update"
+  # report failure in slack
   if [[ $slackuri != "" ]]; then
     curl -L -X POST $slackuri \
     --data-raw '{
@@ -88,9 +90,17 @@ case "$update" in
       "text" : "'"$slacksitename"' DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')."
     }'
   fi
+  # report failure in discord
+  if [[ $discorduri != "" ]]; then
+    curl \
+    -H "Content-Type: application/json" \
+    -d '{"username": "'$discorduname'", "content": "DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')."}' \
+    $discorduri
+fi
   exit 1;;
 *)
   logger "DDNS Updater: $ip $record_name DDNS updated."
+  # report success in slack
   if [[ $slackuri != "" ]]; then
     curl -L -X POST $slackuri \
     --data-raw '{
@@ -98,5 +108,12 @@ case "$update" in
       "text" : "'"$slacksitename"' Updated: '$record_name''"'"'s'""' new IP Address is '$ip'"
     }'
   fi
+  # report success in discord
+  if [[ $discorduri != "" ]]; then
+    curl \
+    -H "Content-Type: application/json" \
+    -d '{"username": "'$discorduname'", "content": "DDNS Updated: '$record_name': new IP Address is '$ip'."}' \
+    $discorduri
+fi
   exit 0;;
 esac
