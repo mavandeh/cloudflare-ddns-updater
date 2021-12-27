@@ -24,7 +24,7 @@ This script is used with crontab. Specify the frequency of execution through cro
 # │ │ │ │ │ ┌───────────── command to issue                               
 # │ │ │ │ │ │
 # │ │ │ │ │ │
-# * * * * * /bin/bash {Location of the script}
+# * * * * * /bin/bash {Location of the script} {sub.recordname.com}
 ```
 
 ## Contributing
